@@ -1,10 +1,60 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
-    match /artworks/{id} {
-      allow read: if true;
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    match /databases/{database}/documents {
+
+        // 便利関数
+        function isSignedIn() { return request.auth != null; }
+        function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+
+        // artworks: 公開読み取り、本人のみ書き込み
+        match /artworks/{id} {
+            allow read: if true;
+
+            allow create: if isSignedIn()
+                && request.resource.data.ownerId == request.auth.uid
+                && request.resource.data.keys().hasOnly(
+                        ["ownerId","imagePath","caption","tags","createdAt","likeCount","visibility"]
+                )
+                && request.resource.data.createdAt == request.time
+                && request.resource.data.likeCount == 0
+                && (request.resource.data.visibility in ["public","private"])
+                && request.resource.data.tags is list;
+
+            // likeCountはクライアント直接更新させない（将来はトランザクション/CFで更新）
+            allow update: if isSignedIn()
+                && resource.data.ownerId == request.auth.uid
+                && request.resource.data.ownerId == resource.data.ownerId
+                && request.resource.data.likeCount == resource.data.likeCount;
+
+            allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+            // いいね用サブコレクション（将来用）
+            match /likes/{uid} {
+                allow read: if true;
+                allow create, delete: if isSignedIn() && request.auth.uid == uid;
+                allow update: if false;
+            }
+        }
+
+        // users: 公開読み取り、本人のみ作成/更新/削除
+        match /users/{uid} {
+            allow read: if true;
+
+            allow create: if isOwner(uid)
+                && request.resource.data.keys().hasOnly(
+                        ["uid","handleName","email","provider","avatarURL",
+                            "passwordHash","passwordReminderCode","createdAt","updatedAt"]
+                )
+                && request.resource.data.uid == uid
+                && request.resource.data.createdAt == request.time
+                && request.resource.data.updatedAt == request.time;
+
+            allow update: if isOwner(uid)
+                && request.resource.data.uid == resource.data.uid
+                && request.resource.data.createdAt == resource.data.createdAt
+                && request.resource.data.updatedAt == request.time;
+
+            allow delete: if isOwner(uid);
+        }
     }
-  }
 }
