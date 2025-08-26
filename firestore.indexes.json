@@ -47,5 +47,31 @@
   //   },
   // ]
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [],
+    "indexes": [
+        {
+            "collectionGroup": "artworks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "createdAt", "order": "DESCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "artworks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "tags", "arrayConfig": "CONTAINS" },
+                { "fieldPath": "createdAt", "order": "DESCENDING" }
+            ]
+        },
+        {
+            "collectionGroup": "artworks",
+            "queryScope": "COLLECTION",
+            "fields": [
+                { "fieldPath": "searchTokens", "arrayConfig": "CONTAINS" },
+                { "fieldPath": "createdAt", "order": "DESCENDING" }
+            ]
+        }
+    ],
+    "fieldOverrides": []
 }

@@ -11,7 +11,10 @@
     "moduleResolution": "Bundler",
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "lib": ["ES2021", "DOM"],
+    "jsx": "react-jsx",
+    "skipLibCheck": true
   }
 }
 

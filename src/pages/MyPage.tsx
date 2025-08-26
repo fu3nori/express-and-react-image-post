@@ -56,6 +56,7 @@ export default function MyPage() {
 
             <div className="flex gap-3">
                 <Link to="/me/profile" className="px-3 py-2 border rounded">プロフィール編集</Link>
+                <Link to="/upload" className="px-3 py-2 border rounded">作品を投稿</Link> {/* ←追加 */}
                 <Link to="/" className="px-3 py-2 border rounded">トップへ</Link>
             </div>
         </main>

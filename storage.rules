@@ -14,5 +14,21 @@ service firebase.storage {
             allow read: if true;
             allow write: if isSignedIn() && request.auth.uid == uid;
         }
+
+        // プロフィール画像
+        match /users/{uid}/{file} {
+            allow read: if true;
+            allow write: if isSignedIn() && request.auth.uid == uid
+                && request.resource.size < 10 * 1024 * 1024
+                && (request.resource.contentType == "image/jpeg" || request.resource.contentType == "image/png");
+        }
+
+        // 作品：original / view_1280 / thumb_500
+        match /artworks/{uid}/{artId}/{name} {
+            allow read: if true;
+            allow write: if isSignedIn() && request.auth.uid == uid
+                && request.resource.size < 10 * 1024 * 1024
+                && (request.resource.contentType == "image/jpeg" || request.resource.contentType == "image/png");
+        }
     }
 }

@@ -57,5 +57,79 @@ service cloud.firestore {
 
             allow delete: if isOwner(uid);
         }
+
+        // 作品（誰でも閲覧可、本人のみ作成・更新・削除）
+        match /artworks/{id} {
+            allow read: if true;
+
+            allow create: if isSignedIn()
+                && request.resource.data.ownerId == request.auth.uid
+                && request.resource.data.keys().hasOnly(
+                        ["ownerId","title","caption","tags","createdAt","updatedAt",
+                            "likeCount","visibility","viewPath","thumbPath","searchTokens","tagsLocked"]
+                )
+                && request.resource.data.likeCount == 0
+                && (request.resource.data.visibility in ["public","private"])
+                && request.resource.data.tags is list
+                && request.resource.data.tags.size() <= 10
+                && request.resource.data.searchTokens is list
+                && request.resource.data.createdAt == request.time
+                && request.resource.data.updatedAt == request.time;
+
+            // 更新時：owner固定／tagsはロックされていれば変更不可／likeCountはクライアント直接変更不可
+            allow update: if isSignedIn()
+                && resource.data.ownerId == request.auth.uid
+                && request.resource.data.ownerId == resource.data.ownerId
+                && request.resource.data.likeCount == resource.data.likeCount
+                && ( // タグロック中は不変
+                    !resource.data.tagsLocked ||
+                        request.resource.data.tags == resource.data.tags
+                );
+
+            allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+            // いいね
+            match /likes/{uid} {
+                allow read: if true;
+                allow create, delete: if isSignedIn() && request.auth.uid == uid;
+                allow update: if false;
+            }
+
+            // コメント
+            match /comments/{commentId} {
+                allow read: if true;
+                allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly(["userId","content","createdAt"])
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.content is string
+                    && request.resource.data.content.size() > 0
+                    && request.resource.data.content.size() <= 4000; // bytes基準。ざっくり
+                allow delete: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+                allow update: if false;
+            }
+        }
+
+        // users（プロフィール編集）
+        match /users/{uid} {
+            allow read: if true;
+
+            allow create: if isOwner(uid)
+                && request.resource.data.keys().hasOnly(
+                        ["uid","handleName","email","provider","avatarURL","homepageURL",
+                            "passwordHash","passwordReminderCode","createdAt","updatedAt"]
+                )
+                && request.resource.data.uid == uid
+                && request.resource.data.createdAt == request.time
+                && request.resource.data.updatedAt == request.time;
+
+            allow update: if isOwner(uid)
+                && request.resource.data.uid == resource.data.uid
+                && request.resource.data.createdAt == resource.data.createdAt
+                && request.resource.data.updatedAt == request.time;
+
+            allow delete: if isOwner(uid);
+        }
+
     }
 }
