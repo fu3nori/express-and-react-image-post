@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-
+export { serverTimestamp as ts };
 // エミュ接続
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
     connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
@@ -54,7 +54,7 @@ export async function ensureUserDocument() {
         email: u.email || null,
         provider: "google",
         avatarURL: u.photoURL || null,
-
+        homepageURL: null,
         // 独自アカウント用に将来使用（今は null でプレースホルダ）
         passwordHash: null,
         passwordReminderCode: null,

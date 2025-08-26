@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import MyPage from './pages/MyPage'
 import Works from './pages/Works'
 import RequireAuth from './ui/RequireAuth'
+import ProfileEdit from './pages/ProfileEdit'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -18,6 +19,12 @@ const router = createBrowserRouter([
             <RequireAuth>
                 <MyPage />
             </RequireAuth>
+    },{ path: '/me/profile',
+        element: (
+            <RequireAuth>
+                <ProfileEdit />
+            </RequireAuth>
+        )
     },
 ])
 
