@@ -7,7 +7,7 @@
     "dev": "vite --port 5002 --strictPort --host 127.0.0.1",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "format": "prettier --write .",
-    "emu": "npx firebase-tools@latest emulators:start",
+    "emu": "npx firebase-tools@latest emulators:start --import=./.emudata --export-on-exit=./.emudata",
     "dev:all": "concurrently -k -n VITE,EMU \"npm run dev\" \"npm run emu\"",
     "build": "vite build",
     "preview": "vite preview"

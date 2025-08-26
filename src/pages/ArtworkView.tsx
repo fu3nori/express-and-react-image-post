@@ -1,7 +1,12 @@
+// src/pages/ArtworkView.tsx
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { db, storage, auth, ts } from "../lib/firebase";
-import { collection, doc, getDoc, addDoc, runTransaction, increment } from "firebase/firestore";
+import {
+    collection, doc, getDoc, addDoc,
+    setDoc, deleteDoc,
+    getCountFromServer, query, orderBy, onSnapshot
+} from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 
@@ -12,53 +17,65 @@ type Artwork = {
     caption: string;
     tags: string[];
     viewPath: string;
-    likeCount: number;
+    likeCount?: number;
 };
+type Comment = { id: string; userId: string; content: string; createdAt: any };
 
 export default function ArtworkView() {
     const { id } = useParams();
     const [user] = useAuthState(auth as any);
+
     const [art, setArt] = useState<Artwork | null>(null);
     const [url, setUrl] = useState<string>("");
+    const [comments, setComments] = useState<Comment[]>([]);
     const [comment, setComment] = useState("");
     const [msg, setMsg] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!id) return;
+        let unSub = () => {};
+
         (async () => {
-            if (!id) return;
+            // 作品読み込み
             const snap = await getDoc(doc(db, "artworks", id));
-            if (!snap.exists()) return setMsg("作品が見つかりません。");
+            if (!snap.exists()) { setMsg("作品が見つかりません。"); return; }
             const a = { id: snap.id, ...(snap.data() as any) } as Artwork;
             setArt(a);
+
+            // 表示用画像URL
             const u = await getDownloadURL(ref(storage, a.viewPath));
             setUrl(u);
+
+            // いいね数の初期値（集計）
+            const agg = await getCountFromServer(collection(db, `artworks/${id}/likes`));
+            setArt(prev => prev ? ({ ...prev, likeCount: agg.data().count }) : prev);
         })();
+
+        // コメント購読
+        const qC = query(collection(db, `artworks/${id}/comments`), orderBy("createdAt", "asc"));
+        unSub = onSnapshot(qC, (ss) => {
+            setComments(ss.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+        });
+
+        return () => unSub();
     }, [id]);
 
     async function like() {
-        if (!user || !id) return alert("ログインが必要です。");
-        const postRef = doc(db, "artworks", id);
+        if (!user || !id) { alert("ログインが必要です。"); return; }
         const likeRef = doc(db, `artworks/${id}/likes`, user.uid);
-        await runTransaction(db, async trx => {
-            const likeSnap = await trx.get(likeRef);
-            const postSnap = await trx.get(postRef);
-            if (!postSnap.exists()) throw new Error("missing");
-            if (!likeSnap.exists()) {
-                trx.set(likeRef, { userId: user.uid, createdAt: new Date() });
-                trx.update(postRef, { likeCount: increment(1) });
-            } else {
-                trx.delete(likeRef);
-                trx.update(postRef, { likeCount: increment(-1) });
-            }
-        });
-        // カウンタ再読込
-        const snap = await getDoc(doc(db, "artworks", id));
-        if (snap.exists()) setArt(prev => prev ? ({...prev, likeCount: (snap.data() as any).likeCount}) : prev);
+        const likeSnap = await getDoc(likeRef);
+        if (!likeSnap.exists()) {
+            await setDoc(likeRef, { userId: user.uid, createdAt: ts() });
+        } else {
+            await deleteDoc(likeRef);
+        }
+        const agg = await getCountFromServer(collection(db, `artworks/${id}/likes`));
+        setArt(prev => prev ? ({ ...prev, likeCount: agg.data().count }) : prev);
     }
 
     async function submitComment(e: React.FormEvent) {
         e.preventDefault();
-        if (!user || !id) return alert("ログインが必要です。");
+        if (!user || !id) { alert("ログインが必要です。"); return; }
         if (!comment.trim()) return;
         try {
             await addDoc(collection(db, `artworks/${id}/comments`), {
@@ -68,7 +85,7 @@ export default function ArtworkView() {
             });
             setComment("");
             setMsg("コメントを投稿しました。");
-        } catch(e:any) {
+        } catch (e: any) {
             setMsg(e.message || "コメント投稿に失敗しました。");
         }
     }
@@ -78,33 +95,43 @@ export default function ArtworkView() {
     return (
         <main className="p-6 max-w-3xl mx-auto">
             <h2 className="text-xl font-bold mb-2">{art.title}</h2>
+
             <div className="mb-3">
-                {/* pre表示 */}
                 <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{art.caption}</pre>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
                 {art.tags?.map(t => (
-                    <a key={t} href={`/works?tags=${encodeURIComponent(t)}`} className="px-2 py-1 border rounded text-sm">
+                    <Link key={t} to={`/works?tags=${encodeURIComponent(t)}`} className="px-2 py-1 border rounded text-sm">
                         #{t}
-                    </a>
+                    </Link>
                 ))}
             </div>
 
-            {url && <img src={url} alt="" style={{width:"100%",height:"auto",borderRadius:12}}/>}
+            {url && <img src={url} alt="" style={{ width: "100%", height: "auto", borderRadius: 12 }} />}
 
             <div className="mt-4 flex gap-3">
                 <button onClick={like} className="px-3 py-2 border rounded">♥ いいね {art.likeCount ?? 0}</button>
-                <a className="px-3 py-2 border rounded" href="/works">一覧へ戻る</a>
+                <Link className="px-3 py-2 border rounded" to="/works">一覧へ戻る</Link>
             </div>
 
             <section className="mt-6">
                 <h3 className="font-semibold mb-2">感想を送る</h3>
                 <form onSubmit={submitComment} className="flex flex-col gap-2">
-                    <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={4} className="border rounded px-3 py-2"/>
+                    <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} className="border rounded px-3 py-2" />
                     <button className="px-3 py-2 border rounded self-start">送信</button>
                 </form>
                 {msg && <div className="text-sm mt-2">{msg}</div>}
+
+                <div className="mt-4 space-y-3">
+                    {comments.map(c => (
+                        <div key={c.id} className="border rounded-lg p-2">
+                            <div className="text-xs text-gray-500">{c.userId}</div>
+                            <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.content}</pre>
+                        </div>
+                    ))}
+                    {comments.length === 0 && <div className="text-sm text-gray-500">まだコメントはありません。</div>}
+                </div>
             </section>
         </main>
     );
