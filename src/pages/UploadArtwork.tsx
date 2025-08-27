@@ -5,22 +5,20 @@ import { setDoc, doc } from "firebase/firestore";
 import { ref, uploadBytes } from "firebase/storage";
 import { Link, useNavigate } from "react-router-dom";
 
-
-
-
 /** ファイル条件 */
 const ACCEPT = ["image/jpeg", "image/jpg", "image/png"];
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const VIEW_MAX = { w: 1280, h: 1280 };
 const THUMB_MAX = { w: 500, h: 500 };
 
-/** 文字数（全角OK・ブラウザ側では length 満たしてもOK。厳密はルールでbytes基準） */
+/** 文字数 */
 const TITLE_MAX = 140;
 const CAPTION_MAX = 1400;
 const TAG_MAX_COUNT = 10;
 const TAG_MAX_LEN = 20;
 
 export default function UploadArtwork() {
+    // ★★★ ここより上に Hook（useState 等）を置かない！★★★
     const [user] = useAuthState(auth as any);
     const nav = useNavigate();
     const fileRef = useRef<HTMLInputElement | null>(null);
@@ -31,17 +29,23 @@ export default function UploadArtwork() {
     const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
+    const [fileName, setFileName] = useState("");
 
-    async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const f = e.target.files?.[0] || null;
-        if (!f) { setPreview(null); return; }
+        if (!f) { setPreview(null); setFileName(""); return; }
         if (!ACCEPT.includes(f.type)) {
-            alert("jpg/jpeg/png のみアップロードできます。"); e.target.value = ""; return;
+            alert("jpg/jpeg/png のみアップロードできます。");
+            e.target.value = "";
+            return;
         }
         if (f.size > MAX_FILE_BYTES) {
-            alert("ファイルサイズは最大10MBまでです。"); e.target.value = ""; return;
+            alert("ファイルサイズは最大10MBまでです。");
+            e.target.value = "";
+            return;
         }
         setPreview(URL.createObjectURL(f));
+        setFileName(f.name);
     }
 
     function validateTags(raw: string): string[] {
@@ -79,16 +83,14 @@ export default function UploadArtwork() {
             const ext = mime === "image/png" ? "png" : "jpg";
             const base = `artworks/${user.uid}/${artId}`;
 
-            // original は保存しない仕様にして軽量化（必要なら uploadBytes(ref(storage, `${base}/original.${ext}`), f)）
+            // original は保存しない仕様
             const viewRef = ref(storage, `${base}/view_1280.${ext}`);
             const thumbRef = ref(storage, `${base}/thumb_500.${ext}`);
 
             await uploadBytes(viewRef, viewBlob, { contentType: viewBlob.type });
             await uploadBytes(thumbRef, thumbBlob, { contentType: thumbBlob.type });
 
-
-
-            // キーワード検索用：簡易N-gramで searchTokens を作る
+            // 検索トークン
             const tokens = buildSearchTokens(`${title}\n${caption}\n${tags.join(" ")}`);
 
             await setDoc(doc(db, "artworks", artId), {
@@ -107,7 +109,6 @@ export default function UploadArtwork() {
             });
 
             setMsg("投稿しました。");
-            // 一覧へ戻る
             nav("/works");
         } catch (err: any) {
             setMsg(err.message || "投稿に失敗しました。");
@@ -123,29 +124,62 @@ export default function UploadArtwork() {
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
                 <label className="flex flex-col gap-1">
                     <span>タイトル（最大{TITLE_MAX}文字）</span>
-                    <input className="border rounded px-3 py-2" value={title} onChange={e=>setTitle(e.target.value)} required maxLength={TITLE_MAX}/>
+                    <br />
+                    <input className="border rounded px-3 py-2"
+                           value={title} onChange={e=>setTitle(e.target.value)}
+                           required maxLength={TITLE_MAX}/>
+                    <br />
+                    <br />
                 </label>
 
                 <label className="flex flex-col gap-1">
                     <span>キャプション（最大{CAPTION_MAX}文字）</span>
-                    <textarea className="border rounded px-3 py-2" value={caption} onChange={e=>setCaption(e.target.value)} rows={6} maxLength={CAPTION_MAX}/>
+                    <br />
+                    <textarea className="border rounded px-3 py-2"
+                              value={caption} onChange={e=>setCaption(e.target.value)}
+                              rows={6} maxLength={CAPTION_MAX}/>
                 </label>
-
+                <br />
+                <br />
                 <label className="flex flex-col gap-1">
                     <span>タグ（最大{TAG_MAX_COUNT}件・各{TAG_MAX_LEN}文字）※空白/カンマ区切り</span>
-                    <input className="border rounded px-3 py-2" value={tagsText} onChange={e=>setTagsText(e.target.value)} placeholder="ugfs SF 宇宙"/>
+                    <br />
+                    <input className="border rounded px-3 py-2"
+                           value={tagsText} onChange={e=>setTagsText(e.target.value)}
+                           placeholder="ugfs SF 宇宙"/>
                 </label>
-
-                <label className="flex flex-col gap-1">
+                <br />
+                <br />
+                {/* ファイル選択：カスタムボタン */}
+                <div className="flex flex-col gap-1">
                     <span>画像（jpg/jpeg/png・10MBまで）</span>
-                    <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" onChange={onFileChange}/>
+                    <div className="flex items-center gap-3">
+                        <input
+                            id="artfile"
+                            ref={fileRef}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png"
+                            onChange={onFileChange}
+                            className="sr-only"
+                        />
+                        <label htmlFor="artfile" className="btn-upload">ファイルを選択</label>
+                        <br />
+                        <br />
+                        <span className="text-sm text-gray-500">{fileName || "未選択"}</span>
+                    </div>
+                    <br />
                     {preview && <img src={preview} alt="" style={{width:160,height:160,objectFit:'cover',borderRadius:12}}/>}
-                </label>
+                </div>
 
                 <div className="flex gap-3">
-                    <button disabled={busy} type="submit" className="px-4 py-2 border rounded">{busy ? "投稿中..." : "投稿する"}</button>
-                    <Link to="/me" className="px-4 py-2 border rounded">ダッシュボードに戻る</Link>
+                    <button disabled={busy} type="submit" className="px-4 py-2 border rounded">
+                        {busy ? "投稿中..." : "投稿する"}
+                    </button>
+                    <br />
+                    <br />
+                    <div><Link to="/me" ><button className="custom-button-normal2">マイページに戻る</button></Link></div>
                 </div>
+
                 {msg && <div className="text-sm">{msg}</div>}
             </form>
         </main>
@@ -167,7 +201,6 @@ function readImageFile(file: File): Promise<HTMLImageElement> {
         fr.readAsDataURL(file);
     });
 }
-
 function resizeToFit(img: HTMLImageElement, maxW: number, maxH: number): HTMLCanvasElement {
     const r = Math.min(maxW / img.width, maxH / img.height, 1);
     const w = Math.round(img.width * r), h = Math.round(img.height * r);
@@ -176,25 +209,19 @@ function resizeToFit(img: HTMLImageElement, maxW: number, maxH: number): HTMLCan
     c.getContext("2d")!.drawImage(img, 0, 0, w, h);
     return c;
 }
-
 function canvasToBlob(canvas: HTMLCanvasElement, mime: string, q?: number): Promise<Blob | null> {
     return new Promise(res => canvas.toBlob(res, mime, q));
 }
-
-/** 簡易N-gram（2〜3gram）＋英数字は単語分割 */
 function buildSearchTokens(input: string): string[] {
     const norm = (input || "").toLowerCase().replace(/\s+/g, "");
     const grams = new Set<string>();
-    // 英数字単語
     input.toLowerCase().split(/\W+/).filter(Boolean).forEach(w => {
         grams.add(w);
         for (let i=0;i<w.length-1;i++) grams.add(w.slice(i,i+2));
         for (let i=0;i<w.length-2;i++) grams.add(w.slice(i,i+3));
     });
-    // 全体のN-gram（日本語対策）
     for (let i=0;i<norm.length-1;i++) grams.add(norm.slice(i,i+2));
     for (let i=0;i<norm.length-2;i++) grams.add(norm.slice(i,i+3));
-    // Firestore array-contains-any は最大10語まで。多すぎるので保存側は最大200語に抑制
     return Array.from(grams).slice(0, 200);
 }
 function newId(): string {

@@ -3,7 +3,7 @@ import { auth, db, storage, ts } from "../lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 type UserDoc = {
     uid: string;
@@ -20,15 +20,21 @@ const MAX_OUT_H = 300;
 
 export default function ProfileEdit() {
     const [user] = useAuthState(auth as any);
-    const nav = useNavigate();
     const fileRef = useRef<HTMLInputElement | null>(null);
-    const [fileName, setFileName] = useState("");
+
     const [ud, setUd] = useState<UserDoc | null>(null);
     const [handleName, setHandleName] = useState("");
     const [homepageURL, setHomepageURL] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
+    const [fileName, setFileName] = useState("");
+
+    function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const f = e.target.files?.[0] || null;
+        setFileName(f ? f.name : "");
+        if (f) setPreview(URL.createObjectURL(f));
+    }
 
     useEffect(() => {
         (async () => {
@@ -97,8 +103,6 @@ export default function ProfileEdit() {
 
             setMsg("プロフィールを更新しました。");
             if (avatarURL) setPreview(avatarURL);
-            // ダッシュボードに戻るなら↓
-            // nav("/me");
         } catch (e: any) {
             setMsg(e.message || "更新に失敗しました。");
         } finally {
@@ -112,8 +116,7 @@ export default function ProfileEdit() {
 
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
                 <label className="flex flex-col gap-1">
-                    <span>表示用ハンドルネーム</span>
-                    <br />
+                    <span>表示用ハンドルネーム</span><br />
                     <input
                         value={handleName}
                         onChange={(e) => setHandleName(e.target.value)}
@@ -123,20 +126,38 @@ export default function ProfileEdit() {
                     />
                 </label>
                 <br />
-                <label className="flex flex-col gap-1"><br />
-                    <span>ホームページURL（任意）</span><br />
+                <br />
+                <label className="flex flex-col gap-1">
+                    <span>ホームページURL（任意）</span>
+                    <br />
                     <input
                         value={homepageURL}
                         onChange={(e) => setHomepageURL(e.target.value)}
                         className="border rounded px-3 py-2"
                         placeholder="https://example.com"
                     />
+                    <br />
+                    <br />
                 </label>
-                <br />
-                <br />
-                <label className="flex flex-col gap-1">
-                    <span>プロフィール画像（jpg/jpeg/png、最大1280×1280 → 300px以内に縮小）</span><br />
-                    <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" className="file-input" />
+
+                <div className="flex flex-col gap-1">
+                    <span>プロフィール画像（jpg/jpeg/png、最大1280×1280 → 300px以内に縮小）</span>
+                    <br />
+                    <div className="flex items-center gap-3">
+                        <input
+                            id="avatar"
+                            ref={fileRef}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png"
+                            onChange={onFileChange}
+                            className="sr-only"
+                        />
+                        <label htmlFor="avatar" className="btn-upload">画像を選ぶ</label>
+                        <br />
+                        <br />
+
+                        <span className="text-sm text-gray-500">{fileName || "未選択"}</span>
+                    </div>
                     {preview && (
                         <img
                             src={preview}
@@ -144,14 +165,15 @@ export default function ProfileEdit() {
                             style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 12 }}
                         />
                     )}
-                </label>
-                <br />
+                </div>
+
                 <div className="flex gap-3">
-                    <br />
-                    <button disabled={busy} type="submit" className="custom-button-normal">
+                    <button disabled={busy} type="submit" className="btn-upload">
                         {busy ? "更新中..." : "保存する"}
                     </button>
-                    <Link to="/me" className="px-4 py-2 border rounded"><button className="custom-button-normal"> ダッシュボードに戻る</button></Link>
+                    <br />
+                    <br />
+                    <div><Link to="/me" ><button className="custom-button-normal2">マイページに戻る</button></Link></div>
                 </div>
 
                 {msg && <div className="text-sm">{msg}</div>}
@@ -168,7 +190,7 @@ function readImageFile(file: File): Promise<HTMLImageElement> {
         fr.onload = () => {
             const img = new Image();
             img.onload = () => resolve(img);
-            img.onerror = (e) => reject(new Error("画像を読み込めませんでした。"));
+            img.onerror = () => reject(new Error("画像を読み込めませんでした。"));
             img.src = String(fr.result);
         };
         fr.onerror = () => reject(new Error("ファイルを読み込めませんでした。"));
@@ -177,7 +199,7 @@ function readImageFile(file: File): Promise<HTMLImageElement> {
 }
 
 function resizeToFit(img: HTMLImageElement, maxW: number, maxH: number): HTMLCanvasElement {
-    const ratio = Math.min(maxW / img.width, maxH / img.height, 1); // 拡大しない
+    const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
     const w = Math.round(img.width * ratio);
     const h = Math.round(img.height * ratio);
     const canvas = document.createElement("canvas");

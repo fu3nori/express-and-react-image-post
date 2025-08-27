@@ -98,9 +98,13 @@ export default function Works() {
 
             <form onSubmit={onSearch} className="flex flex-wrap gap-2 mb-4">
                 <input name="tags" defaultValue={tagQuery} className="border rounded px-3 py-2" placeholder="タグ（空白区切り・AND）" />
+                <br />
                 <input name="q" defaultValue={kw} className="border rounded px-3 py-2" placeholder="キーワード（タイトル/キャプション/タグ 部分一致）" />
+                <br />
+                <br />
                 <button type="submit" className="px-4 py-2 border rounded">検索</button>
-                <Link to="/works" className="px-4 py-2 border rounded">クリア</Link>
+                <br />
+                <br />
             </form>
 
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
@@ -112,7 +116,7 @@ export default function Works() {
                                 : <div style={{width:"100%",height:180,background:"#eee",borderRadius:12}}/>}
                         </Link>
                         <div className="mt-2 font-semibold line-clamp-2">{a.title}</div>
-                        <Link to={`/art/${a.id}`} className="text-sm underline">詳細を見る</Link>
+                        <Link to={`/art/${a.id}`} className="text-sm underline"><button className="custom-button-normal">詳細を見る</button></Link>
                     </article>
                 ))}
             </div>
