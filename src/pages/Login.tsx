@@ -14,9 +14,9 @@ export default function Login() {
     return (
         <main className="p-6 max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-4">ログイン</h2>
-            <button onClick={onGoogle} className="px-4 py-2 border rounded w-full mb-4">
-                Google でログイン
-            </button>
+            <div onClick={onGoogle} >
+                <img src="./image/login.png"  />
+            </div>
             <p className="text-sm text-gray-500">
                 アカウント未作成でも、初回ログイン時にユーザーを自動作成します。
             </p>
