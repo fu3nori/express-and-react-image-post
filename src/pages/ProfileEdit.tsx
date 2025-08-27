@@ -22,7 +22,7 @@ export default function ProfileEdit() {
     const [user] = useAuthState(auth as any);
     const nav = useNavigate();
     const fileRef = useRef<HTMLInputElement | null>(null);
-
+    const [fileName, setFileName] = useState("");
     const [ud, setUd] = useState<UserDoc | null>(null);
     const [handleName, setHandleName] = useState("");
     const [homepageURL, setHomepageURL] = useState("");
@@ -136,7 +136,7 @@ export default function ProfileEdit() {
                 <br />
                 <label className="flex flex-col gap-1">
                     <span>プロフィール画像（jpg/jpeg/png、最大1280×1280 → 300px以内に縮小）</span><br />
-                    <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" />
+                    <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" className="file-input" />
                     {preview && (
                         <img
                             src={preview}
@@ -146,7 +146,8 @@ export default function ProfileEdit() {
                     )}
                 </label>
                 <br />
-                <div className="flex gap-3">                <br />
+                <div className="flex gap-3">
+                    <br />
                     <button disabled={busy} type="submit" className="custom-button-normal">
                         {busy ? "更新中..." : "保存する"}
                     </button>
