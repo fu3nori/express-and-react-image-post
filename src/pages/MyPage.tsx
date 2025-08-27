@@ -28,7 +28,7 @@ export default function MyPage() {
 
     return (
         <main className="p-6 max-w-2xl mx-auto">
-            <h2 className="text-xl font-bold mb-4">ダッシュボード</h2>
+            <h2 className="text-xl font-bold mb-4">マイページ</h2>
 
             <div className="flex items-center gap-4 mb-4">
                 {ud?.avatarURL ? (
@@ -55,9 +55,16 @@ export default function MyPage() {
             </div>
 
             <div className="flex gap-3">
-                <Link to="/me/profile" className="px-3 py-2 border rounded">プロフィール編集</Link>
-                <Link to="/upload" className="px-3 py-2 border rounded">作品を投稿</Link> {/* ←追加 */}
-                <Link to="/" className="px-3 py-2 border rounded">トップへ</Link>
+                <div>
+                    <Link to="/me/profile" className="px-3 py-2 border rounded"><button className="custom-button-normal">プロフィール編集</button></Link>
+                </div>
+                <div>
+                    <Link to="/upload" className="px-3 py-2 border rounded"><button className="custom-button-normal">作品を投稿</button></Link>
+                </div>
+                <div>
+                    <Link to="/" className="px-3 py-2 border rounded"><button className="custom-button-normal">トップへ</button></Link>
+                </div>
+
             </div>
         </main>
     );

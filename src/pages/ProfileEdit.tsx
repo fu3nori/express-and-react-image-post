@@ -113,6 +113,7 @@ export default function ProfileEdit() {
             <form onSubmit={onSubmit} className="flex flex-col gap-4">
                 <label className="flex flex-col gap-1">
                     <span>表示用ハンドルネーム</span>
+                    <br />
                     <input
                         value={handleName}
                         onChange={(e) => setHandleName(e.target.value)}
@@ -121,9 +122,9 @@ export default function ProfileEdit() {
                         placeholder="例）Storch"
                     />
                 </label>
-
-                <label className="flex flex-col gap-1">
-                    <span>ホームページURL（任意）</span>
+                <br />
+                <label className="flex flex-col gap-1"><br />
+                    <span>ホームページURL（任意）</span><br />
                     <input
                         value={homepageURL}
                         onChange={(e) => setHomepageURL(e.target.value)}
@@ -131,9 +132,10 @@ export default function ProfileEdit() {
                         placeholder="https://example.com"
                     />
                 </label>
-
+                <br />
+                <br />
                 <label className="flex flex-col gap-1">
-                    <span>プロフィール画像（jpg/jpeg/png、最大1280×1280 → 300px以内に縮小）</span>
+                    <span>プロフィール画像（jpg/jpeg/png、最大1280×1280 → 300px以内に縮小）</span><br />
                     <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png" />
                     {preview && (
                         <img
@@ -143,12 +145,12 @@ export default function ProfileEdit() {
                         />
                     )}
                 </label>
-
-                <div className="flex gap-3">
-                    <button disabled={busy} type="submit" className="px-4 py-2 border rounded">
+                <br />
+                <div className="flex gap-3">                <br />
+                    <button disabled={busy} type="submit" className="custom-button-normal">
                         {busy ? "更新中..." : "保存する"}
                     </button>
-                    <Link to="/me" className="px-4 py-2 border rounded">ダッシュボードに戻る</Link>
+                    <Link to="/me" className="px-4 py-2 border rounded"><button className="custom-button-normal"> ダッシュボードに戻る</button></Link>
                 </div>
 
                 {msg && <div className="text-sm">{msg}</div>}
