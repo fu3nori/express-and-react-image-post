@@ -7,12 +7,29 @@ import {
 } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
+/** 必須ENVの存在チェック（開発ビルド時のみ厳しめ） */
+function req(name: string): string {
+    const v = (import.meta as any).env?.[name];
+    if (!v && import.meta.env.DEV) {
+        console.warn(`[firebase.ts] Missing env: ${name}`);
+    }
+    return v as string;
+}
+
+/** firebasestorage.app を渡されても appspot.com に補正 */
+function normalizeBucket(bucket?: string): string | undefined {
+    if (!bucket) return bucket;
+    return bucket.endsWith(".firebasestorage.app")
+        ? bucket.replace(".firebasestorage.app", ".appspot.com")
+        : bucket;
+}
+
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_API_KEY,
-    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
-    appId: import.meta.env.VITE_APP_ID,
+    apiKey: req("VITE_API_KEY"),
+    authDomain: req("VITE_AUTH_DOMAIN"),
+    projectId: req("VITE_PROJECT_ID"),
+    storageBucket: normalizeBucket(req("VITE_STORAGE_BUCKET")),
+    appId: req("VITE_APP_ID"),
 };
 
 const app = initializeApp(firebaseConfig);
@@ -20,10 +37,22 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export { serverTimestamp as ts };
-// エミュ接続
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+
+/** エミュ接続：環境フラグ or ローカルホストで有効化 */
+const useAuthEmu = import.meta.env.VITE_USE_AUTH_EMULATOR === "1";
+const useFsEmu  = import.meta.env.VITE_USE_FIRESTORE_EMULATOR === "1";
+const useStEmu  = import.meta.env.VITE_USE_STORAGE_EMULATOR === "1";
+const isLocalHost =
+    typeof location !== "undefined" &&
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1");
+
+if (useAuthEmu || isLocalHost) {
     connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+}
+if (useFsEmu || isLocalHost) {
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+if (useStEmu || isLocalHost) {
     connectStorageEmulator(storage, "127.0.0.1", 9199);
 }
 
@@ -38,12 +67,11 @@ export async function logout() {
     await signOut(auth);
 }
 
-/**
- * 初回ログイン時に users/{uid} を作成（将来の独自アカウント用の項目もプリセット）
- */
+/** 初回ログイン時に users/{uid} を作成（将来の独自アカウント項目はプレースホルダ） */
 export async function ensureUserDocument() {
     const u = auth.currentUser;
     if (!u) return;
+
     const ref = doc(db, "users", u.uid);
     const snap = await getDoc(ref);
     if (snap.exists()) return;
@@ -55,10 +83,8 @@ export async function ensureUserDocument() {
         provider: "google",
         avatarURL: u.photoURL || null,
         homepageURL: null,
-        // 独自アカウント用に将来使用（今は null でプレースホルダ）
-        passwordHash: null,
-        passwordReminderCode: null,
-
+        passwordHash: null,           // 未来の独自アカウント用
+        passwordReminderCode: null,   // 未来の独自アカウント用
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     });

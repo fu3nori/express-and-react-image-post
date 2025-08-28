@@ -64,6 +64,9 @@ export default function MyPage() {
                 <div>
                     <Link to="/" className="px-3 py-2 border rounded"><button className="custom-button-normal">トップへ</button></Link>
                 </div>
+                <div>
+                    <Link to="/works" className="px-3 py-2 border rounded"><button className="custom-button-normal">作品を閲覧</button></Link>
+                </div>
 
             </div>
         </main>
