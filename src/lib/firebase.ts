@@ -6,7 +6,7 @@ import {
     getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, serverTimestamp,
 } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
-
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 /** 必須ENVの存在チェック（開発ビルド時のみ厳しめ） */
 function req(name: string): string {
     const v = (import.meta as any).env?.[name];
@@ -33,6 +33,12 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+if (import.meta.env.PROD && import.meta.env.VITE_APPCHECK_SITE_KEY) {
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(import.meta.env.VITE_APPCHECK_SITE_KEY as string),
+        isTokenAutoRefreshEnabled: true,
+    });
+}
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
