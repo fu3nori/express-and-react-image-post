@@ -127,7 +127,7 @@ export default function UploadArtwork() {
                     <br />
                     <input className="border rounded px-3 py-2"
                            value={title} onChange={e=>setTitle(e.target.value)}
-                           required maxLength={TITLE_MAX}/>
+                           required maxLength={TITLE_MAX} size={40} />
                     <br />
                     <br />
                 </label>
@@ -137,7 +137,7 @@ export default function UploadArtwork() {
                     <br />
                     <textarea className="border rounded px-3 py-2"
                               value={caption} onChange={e=>setCaption(e.target.value)}
-                              rows={6} maxLength={CAPTION_MAX}/>
+                              rows={10} cols={100} maxLength={CAPTION_MAX}/>
                 </label>
                 <br />
                 <br />

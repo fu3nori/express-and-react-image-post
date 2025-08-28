@@ -95,10 +95,12 @@ export default function Works() {
     return (
         <main className="p-6 max-w-5xl mx-auto">
             <h2 className="text-xl font-bold mb-4">作品一覧</h2>
-
+            <span><b>タグ検索</b></span><br />
             <form onSubmit={onSearch} className="flex flex-wrap gap-2 mb-4">
                 <input name="tags" defaultValue={tagQuery} className="border rounded px-3 py-2" placeholder="タグ（空白区切り・AND）" />
                 <br />
+                <br />
+                <span><b>キーワード検索</b></span><br />
                 <input name="q" defaultValue={kw} className="border rounded px-3 py-2" placeholder="キーワード（タイトル/キャプション/タグ 部分一致）" />
                 <br />
                 <br />
@@ -107,18 +109,19 @@ export default function Works() {
                 <br />
             </form>
 
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 setup ">
                 {items.map(a => (
-                    <article key={a.id} className="border rounded-xl p-3">
+                    <article key={a.id} className="border rounded-xl p-3 img-work">
                         <Link to={`/art/${a.id}`}>
                             {thumbURLs[a.id]
-                                ? <img src={thumbURLs[a.id]} alt="" style={{width:"100%",height:180,objectFit:"cover",borderRadius:12}}/>
+                                ? <img src={thumbURLs[a.id]} alt="" style={{width:"100%",height:180,objectFit:"cover",borderRadius:12}}  />
                                 : <div style={{width:"100%",height:180,background:"#eee",borderRadius:12}}/>}
                         </Link>
                         <div className="mt-2 font-semibold line-clamp-2">{a.title}</div>
                         <Link to={`/art/${a.id}`} className="text-sm underline"><button className="custom-button-normal">詳細を見る</button></Link>
                     </article>
                 ))}
+                <br />
             </div>
 
             <div className="mt-4">

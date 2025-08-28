@@ -20,7 +20,7 @@ type Artwork = {
     likeCount?: number;
 };
 type Comment = { id: string; userId: string; content: string; createdAt: any };
-
+type UserProfile = { handleName: string; avatarURL?: string | null };
 export default function ArtworkView() {
     const { id } = useParams();
     const [user] = useAuthState(auth as any);
@@ -28,6 +28,7 @@ export default function ArtworkView() {
     const [art, setArt] = useState<Artwork | null>(null);
     const [url, setUrl] = useState<string>("");
     const [comments, setComments] = useState<Comment[]>([]);
+    const [userMap, setUserMap] = useState<Record<string, UserProfile>>({});
     const [comment, setComment] = useState("");
     const [msg, setMsg] = useState<string | null>(null);
 
@@ -59,7 +60,25 @@ export default function ArtworkView() {
 
         return () => unSub();
     }, [id]);
-
+    // コメントの userId から必要なプロフィールだけ取得してキャッシュ
+    useEffect(() => {
+        const uids = Array.from(new Set(comments.map(c => c.userId).filter(Boolean)));
+        const missing = uids.filter(uid => !userMap[uid]);
+        if (missing.length === 0) return;
+        (async () => {
+            const updates: Record<string, UserProfile> = {};
+            await Promise.all(missing.map(async (uid) => {
+                const s = await getDoc(doc(db, "users", uid));
+                if (s.exists()) {
+                    const d = s.data() as any;
+                    updates[uid] = { handleName: d.handleName || "NoName", avatarURL: d.avatarURL ?? null };
+                } else {
+                    updates[uid] = { handleName: uid.slice(0, 8) }; // フォールバック
+                }
+            }));
+            setUserMap(prev => ({ ...prev, ...updates }));
+        })();
+    }, [comments, userMap]);
     async function like() {
         if (!user || !id) { alert("ログインが必要です。"); return; }
         const likeRef = doc(db, `artworks/${id}/likes`, user.uid);
@@ -134,7 +153,9 @@ export default function ArtworkView() {
                 <div className="mt-4 space-y-3">
                     {comments.map(c => (
                         <div key={c.id} className="border rounded-lg p-2">
-                            <div className="text-xs text-gray-500">{c.userId}</div>
+                            <div className="text-xs text-gray-500">
+                                {userMap[c.userId]?.handleName ?? c.userId}
+                            </div>
                             <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.content}</pre>
                         </div>
                     ))}
